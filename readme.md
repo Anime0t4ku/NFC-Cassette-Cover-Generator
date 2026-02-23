@@ -1,6 +1,6 @@
 # NFC Cassette Cover Generator
 
-NFC Cassette Cover Generator is a Windows desktop application for creating a **single print-ready cassette wrap cover**.
+NFC Cassette Cover Generator is a desktop application for creating a **single print-ready cassette wrap cover**.
 
 Each export generates one complete cover image consisting of:
 
@@ -16,48 +16,54 @@ The output is designed for printing and folding into a physical cassette-style c
 
 ## Download
 
-Pre-built Windows executables are generated automatically via GitHub Actions.
+Pre-built executables are generated automatically via GitHub Actions.
 
-### Nightly Build
+### Latest Release
 
 | Name | Platform | Status | Download |
 |------|----------|--------|----------|
-| NFC Cassette Cover Generator | Windows | [![Build Status](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/actions/workflows/build.yml/badge.svg)](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/actions/workflows/build.yml) | [Download Pre-Release](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/releases/download/Pre-release/NFC-Cassette-Cover-Generator-Windows-x86_64.zip) |
+| NFC Cassette Cover Generator | Windows | ![Build Status](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/actions/workflows/build.yml/badge.svg) | [Download Latest Release](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/releases) |
 
 ---
 
-## Features
+## Features (v1.0.0)
 
-- Desktop GUI built with Tkinter  
-- Live full-wrap preview (Back + Spine + Front combined)  
-- Customizable cover colors (back, spine, banner, text)  
-- Import artwork from file or URL  
-- Separate logo overrides per side  
-- Automatic image scaling and positioning  
-- Back summary text with dynamic wrapping  
-- Timestamped exports  
-- "Export As…" option  
-- Configurable output directory  
-- Persistent settings via `config.json`  
+### Cover Design
+- Live full-wrap preview (Back + Spine + Front combined)
+- Customizable cover colors (back, spine, banner, text)
+- Back summary text with dynamic wrapping
+- Automatic image scaling and positioning
+- Title logo overrides per side
+- System logo overrides per side
+- Optional original cover artwork on back
+- Poster crop modes (Center / Top / Bottom / Manual slider)
 
----
+### Asset Import
+- Import artwork from file
+- Import artwork from URL
+- SteamGridDB integration (posters + title logos)
+- TMDB integration (movies & TV)
+- Unified search system with selectable API sources
+- System logo folder search
+- Optional web logo caching
 
-## Future API Support
-
-API integration (for example, automatic poster, logo, or metadata retrieval) may be explored in future releases.
-
-However, generating a single complete cover would require combining data from multiple APIs, which increases complexity significantly.  
-For this reason, API support is **not guaranteed** and may remain optional or manual.
+### Workflow
+- Timestamped exports
+- “Export As…” option
+- Configurable output directory
+- One-click open output folder
+- Persistent settings via `config.json`
+- Redesigned clean Settings panel
 
 ---
 
 ## Output
 
-- Single high-resolution PNG file  
-- Combined Back + Spine + Front layout  
-- Timestamped filenames  
-- One-click open output directory  
-- Manual save location via "Export As…"  
+- Single high-resolution PNG file
+- Combined Back + Spine + Front layout
+- Print-ready wrap format
+- Timestamped filenames
+- Manual save location via "Export As…"
 
 ---
 
@@ -70,7 +76,7 @@ No Python installation required.
 
 ---
 
-## Running From Source (Windows Only)
+## Running From Source
 
 Only required if you want to run or modify the script directly.
 
@@ -82,14 +88,13 @@ Only required if you want to run or modify the script directly.
 
 Install dependencies:
 
-```
+```bash
 pip install pillow requests
 ```
 
 Run:
 
-```
-cd nfc-cassette-cover-generator
+```bash
 python nfc-cassette-cover-generator.py
 ```
 
