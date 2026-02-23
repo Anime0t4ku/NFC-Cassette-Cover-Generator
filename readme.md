@@ -10,6 +10,8 @@ Each export generates one complete cover image consisting of:
 
 The output is designed for printing and folding into a physical cassette-style case, ideal for NFC projects, retro collections, and custom launch systems.
 
+![NFC Cassette Cover Generator Screenshot](assets/screenshot.png)
+
 ---
 
 ## Download
@@ -18,11 +20,9 @@ Pre-built Windows executables are generated automatically via GitHub Actions.
 
 ### Nightly Build
 
-| Name | Platform | Status |
-|------|----------|--------|
-| NFC Cassette Cover Generator | Windows | [![Build Status](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/actions/workflows/build.yml/badge.svg)](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/actions/workflows/build.yml) |
-
-Latest builds are available in the **Releases** section of this repository.
+| Name | Platform | Status | Download |
+|------|----------|--------|----------|
+| NFC Cassette Cover Generator | Windows | [![Build Status](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/actions/workflows/build.yml/badge.svg)](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/actions/workflows/build.yml) | [Download ZIP](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/releases/download/Pre-release/NFC-Cassette-Cover-Generator-Windows-x86_64.zip) |
 
 ---
 
