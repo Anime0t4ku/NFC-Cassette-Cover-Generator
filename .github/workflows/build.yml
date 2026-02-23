@@ -59,12 +59,13 @@ jobs:
       - name: Download Artifacts
         uses: actions/download-artifact@v7
         with:
-          path: dist
+          name: NFC-Cassette-Cover-Generator-Windows-x86_64
+          path: release
 
       - name: Create Windows ZIP
         run: |
-          cd dist/NFC-Cassette-Cover-Generator-Windows-x86_64
-          zip -r ../../NFC-Cassette-Cover-Generator-Windows-x86_64.zip .
+          cd release
+          zip -r ../NFC-Cassette-Cover-Generator-Windows-x86_64.zip .
 
       - name: Update Git Tag
         run: |

@@ -17,7 +17,7 @@ from PIL import Image, ImageDraw, ImageTk, ImageFont
 # CONFIG
 # ============================================================
 
-APP_TITLE = "Cassette Cover Generator v0.1.0"
+APP_TITLE = "Cassette Cover Generator v0.1.0 by Anime0t4ku"
 CONFIG_FILE = "config.json"
 
 DEFAULT_CONFIG = {
