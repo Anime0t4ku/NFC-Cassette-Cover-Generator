@@ -1,0 +1,42 @@
+name: ✨ Feature Request
+description: Suggest an idea or improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Got an idea to improve NFC Cassette Cover Generator?
+        Describe it below.
+
+  - type: input
+    id: version
+    attributes:
+      label: Current Version
+      placeholder: e.g. v0.1.0
+    validations:
+      required: false
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe how you imagine it working.
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Mockups, screenshots, references, etc.
+    validations:
+      required: false
