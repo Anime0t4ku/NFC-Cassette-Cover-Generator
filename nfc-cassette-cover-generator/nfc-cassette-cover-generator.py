@@ -80,6 +80,13 @@ BACK_GAP = 30
 # UTIL
 # ============================================================
 
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 def load_image_from_file(path):
     img = Image.open(path)
     if img.mode != "RGBA":
@@ -140,7 +147,7 @@ class CassetteApp(tk.Tk):
         self.title(APP_TITLE)
         self.geometry("1400x880")
         try:
-            self.iconphoto(True, tk.PhotoImage(file="icon.png"))
+            self.iconphoto(True, tk.PhotoImage(file=resource_path("icon.png")))
         except:
             pass
         
@@ -189,8 +196,8 @@ class CassetteApp(tk.Tk):
 
         # NFC logos
         self.nfc_logos = {
-            "white": Image.open("assets/nfc_logo_white.png").convert("RGBA"),
-            "black": Image.open("assets/nfc_logo_black.png").convert("RGBA")
+            "white": Image.open(resource_path("assets/nfc_logo_white.png")).convert("RGBA"),
+            "black": Image.open(resource_path("assets/nfc_logo_black.png")).convert("RGBA")
         }
 
         self._build_ui()
