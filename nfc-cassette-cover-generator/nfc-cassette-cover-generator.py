@@ -17,7 +17,7 @@ from PIL import Image, ImageDraw, ImageTk, ImageFont
 # CONFIG
 # ============================================================
 
-APP_TITLE = "Cassette Cover Generator v0.1.0 by Anime0t4ku"
+APP_TITLE = "Cassette Cover Generator v0.2.0 by Anime0t4ku"
 CONFIG_FILE = "config.json"
 
 DEFAULT_CONFIG = {
@@ -67,6 +67,8 @@ TITLE_LOGO_BACK_MAX = (375, 180)
 TITLE_LOGO_SPINE_MAX = (183, 520)
 
 SCREENSHOT_MAX = (350, 420)
+
+ORIGINAL_COVER_BACK_MAX = (320, 320)
 
 SYSTEM_LOGO_FRONT_MAX = (360, 100)
 SYSTEM_LOGO_SPINE_MAX = (120, 300)
@@ -190,6 +192,7 @@ class CassetteApp(tk.Tk):
             "system_logo_front": None,
             "system_logo_spine": None,
             "system_logo_back": None,
+            "original_cover_back": None,
             "screenshot": None,
             "summary": ""
         }
@@ -392,6 +395,7 @@ class CassetteApp(tk.Tk):
         buttons = [
             ("Poster", "poster"),
             ("Screenshot", "screenshot"),
+            ("Original Cover", "original_cover_back"),
         ]
 
         for i, (label, key) in enumerate(buttons):
@@ -414,8 +418,9 @@ class CassetteApp(tk.Tk):
             )
 
             menu_button["menu"] = menu
-            column = 2 if key == "screenshot" else 0
-            menu_button.grid(row=1, column=column, padx=6, pady=6)
+
+            # Automatically place buttons next to each other
+            menu_button.grid(row=1, column=i, padx=6, pady=6)
 
         # --------------------------------------------------
         # TITLE LOGO (NESTED MENU LIKE SYSTEM LOGO)
@@ -470,7 +475,7 @@ class CassetteApp(tk.Tk):
 
         title_btn["menu"] = title_menu
         self.title_logo_menu = title_menu
-        title_btn.grid(row=1, column=1, padx=6, pady=6)
+        title_btn.grid(row=1, column=3, padx=6, pady=6)
 
         # --------------------------------------------------
         # SYSTEM LOGO (SPECIAL NESTED MENU)
@@ -525,7 +530,7 @@ class CassetteApp(tk.Tk):
             self.system_logo_menu_indices[side] = system_menu.index("end")
 
         system_btn["menu"] = system_menu
-        system_btn.grid(row=1, column=3, padx=6, pady=6)
+        system_btn.grid(row=1, column=4, padx=6, pady=6)
 
         self.system_logo_menu = system_menu
         self.update_override_states()
@@ -875,22 +880,46 @@ class CassetteApp(tk.Tk):
 
             y += text_box.height + BACK_GAP
 
-        # Paste NFC back
-        img.paste(
-            nfc_back,
-            ((BACK_W - nfc_back.width) // 2,
-             CARD_H - nfc_back.height - NFC_MARGIN),
-            nfc_back
-        )
+        # --- ORIGINAL COVER  ---
 
-        # Paste system logo above NFC
+        original_cover = self.assets["original_cover_back"]
+
+        # Calculate base Y positions
+        nfc_y = CARD_H - nfc_back.height - NFC_MARGIN
+
+        sys_y = None
+        if sys_back:
+            sys_y = nfc_y - sys_back.height - BACK_GAP
+
+        orig_y = None
+        if original_cover:
+            original_img = fit_image(original_cover, *ORIGINAL_COVER_BACK_MAX)
+
+            if sys_back:
+                orig_y = sys_y - original_img.height - BACK_GAP
+            else:
+                orig_y = nfc_y - original_img.height - BACK_GAP
+
+            img.paste(
+                original_img,
+                ((BACK_W - original_img.width) // 2, orig_y),
+                original_img
+            )
+
+        # --- Paste system logo ---
         if sys_back:
             img.paste(
                 sys_back,
-                ((BACK_W - sys_back.width) // 2,
-                 CARD_H - nfc_back.height - sys_back.height - BACK_GAP - NFC_MARGIN),
+                ((BACK_W - sys_back.width) // 2, sys_y),
                 sys_back
             )
+
+        # --- Paste NFC back ---
+        img.paste(
+            nfc_back,
+            ((BACK_W - nfc_back.width) // 2, nfc_y),
+            nfc_back
+        )
 
         return img
 
