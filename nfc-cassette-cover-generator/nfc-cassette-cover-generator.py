@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageTk, ImageFont
 # CONFIG
 # ============================================================
 
-APP_TITLE = "Cassette Cover Generator v1.0.0 by Anime0t4ku"
+APP_TITLE = "Cassette Cover Generator v1.0.1 by Anime0t4ku"
 CONFIG_FILE = "config.json"
 BASE_DIR = os.path.abspath(".")
 WEB_IMAGE_DIR = os.path.join(BASE_DIR, "web-images")
@@ -2004,7 +2004,7 @@ class CassetteApp(tk.Tk):
             )
             grids.raise_for_status()
 
-            for g in grids.json().get("data", [])[:20]:
+            for g in grids.json().get("data", []):
                 urls.append(g["url"])
 
         except:
@@ -2045,11 +2045,24 @@ class CassetteApp(tk.Tk):
             )
             r.raise_for_status()
 
-            for p in r.json().get("posters", [])[:20]:
+            posters = r.json().get("posters", [])
+
+            # Filter strictly English posters
+            english_posters = [
+                p for p in posters
+                if p.get("iso_639_1") == "en"
+            ]
+
+            # Optional fallback if no English posters exist
+            if not english_posters:
+                english_posters = posters
+
+            # NO LIMIT HERE
+            for p in english_posters:
                 urls.append(f"https://image.tmdb.org/t/p/w500{p['file_path']}")
 
-        except:
-            pass
+        except Exception as e:
+            print("TMDB poster fetch failed:", e)
 
         return urls
 
@@ -2065,7 +2078,17 @@ class CassetteApp(tk.Tk):
             )
             r.raise_for_status()
 
-            for logo in r.json().get("logos", [])[:20]:
+            logos = r.json().get("logos", [])
+
+            english_logos = [
+                l for l in logos
+                if l.get("iso_639_1") == "en"
+            ]
+
+            if not english_logos:
+                english_logos = logos
+
+            for logo in english_logos:
                 urls.append(f"https://image.tmdb.org/t/p/original{logo['file_path']}")
 
         except:
