@@ -22,13 +22,14 @@ Pre-built executables are generated automatically via GitHub Actions.
 
 | Name | Platform | Status | Download |
 |------|----------|--------|----------|
-| NFC Cassette Cover Generator | Windows | ![Build Status](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/actions/workflows/build.yml/badge.svg) | [Download Latest Release](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/releases) |
+| NFC Cassette Cover Generator | Windows | ![Build Status](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/actions/workflows/build.yml/badge.svg) | [Download Latest Release]([https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/releases](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/releases/download/Pre-release/NFC-Cassette-Cover-Generator-Windows-x86_64.zip)) |
 
 ---
 
-## Features (v1.0.0)
+## Features (v2.0.0)
 
 ### Cover Design
+
 - Live full-wrap preview (Back + Spine + Front combined)
 - Customizable cover colors (back, spine, banner, text)
 - Back summary text with dynamic wrapping
@@ -37,8 +38,21 @@ Pre-built executables are generated automatically via GitHub Actions.
 - System logo overrides per side
 - Optional original cover artwork on back
 - Poster crop modes (Center / Top / Bottom / Manual slider)
+- Optional NFC loading system logo (White / Black / Hidden)
+
+### Poster Editor
+
+- Add overlay images from file or URL
+- Drag and reposition overlays
+- Resize overlays using corner handles
+- Overlay layer ordering
+- Delete individual overlays
+- Clear all overlays
+- Apply edited poster directly to the cover
+- Confirmation dialog before permanently applying edits
 
 ### Asset Import
+
 - Import artwork from file
 - Import artwork from URL
 - SteamGridDB integration (posters + title logos)
@@ -47,7 +61,18 @@ Pre-built executables are generated automatically via GitHub Actions.
 - System logo folder search
 - Optional web logo caching
 
+### Asset Management
+
+- Clear buttons available directly in asset menus
+- Individual assets can be reset without restarting the app
+
+### Templates
+
+- Save reusable templates
+- Load templates to quickly restore colors and system logos
+
 ### Workflow
+
 - Timestamped exports
 - “Export As…” option
 - Configurable output directory
@@ -88,15 +113,11 @@ Only required if you want to run or modify the script directly.
 
 Install dependencies:
 
-```bash
-pip install pillow requests
-```
+    pip install pillow requests
 
 Run:
 
-```bash
-python nfc-cassette-cover-generator.py
-```
+    python nfc-cassette-cover-generator.py
 
 ---
 
