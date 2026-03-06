@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageTk, ImageFont
 # CONFIG
 # ============================================================
 
-APP_TITLE = "Cassette Cover Generator v1.0.1 by Anime0t4ku"
+APP_TITLE = "Cassette Cover Generator v2.0.0 by Anime0t4ku"
 CONFIG_FILE = "config.json"
 BASE_DIR = os.path.abspath(".")
 WEB_IMAGE_DIR = os.path.join(BASE_DIR, "web-images")
@@ -73,6 +73,7 @@ TITLE_LOGO_BACK_MAX = (375, 180)
 TITLE_LOGO_SPINE_MAX = (183, 520)
 
 SCREENSHOT_MAX = (350, 420)
+EDITOR_HANDLE_SIZE = 10
 
 ORIGINAL_COVER_BACK_MAX = (320, 320)
 
@@ -152,7 +153,6 @@ def fit_fill(img, w, h):
     top = (img.height - h) // 2
     return img.crop((left, top, left + w, top + h))
 
-
 # ============================================================
 # APP
 # ============================================================
@@ -211,7 +211,17 @@ class CassetteApp(tk.Tk):
             "summary": ""
         }
 
+        self.system_logo_paths = {
+            "default": None,
+            "front": None,
+            "spine": None,
+            "back": None
+        }
+
         self.poster_orientation = "portrait"
+
+        # Poster Editor overlays
+        self.poster_overlays = []
 
         # NFC logos
         self.nfc_logos = {
@@ -281,11 +291,53 @@ class CassetteApp(tk.Tk):
                 self.update_crop_visibility()
                 self.update_poster_orientation()
 
+
         except Exception as e:
+
             messagebox.showerror("Error", f"Failed to load image:\n{e}")
 
+
         finally:
+
             self.config(cursor="")
+
+    # ========================================================
+    # CLEAR ASSETS
+    # ========================================================
+
+    def clear_asset(self, key):
+
+        self.assets[key] = None
+
+        if key == "poster":
+            self.update_crop_visibility()
+
+        self.update_preview()
+
+    def clear_title_logo(self, target):
+
+        key = "title_logo_default" if target == "default" else f"title_logo_{target}"
+        self.assets[key] = None
+
+        if target == "default":
+            self.assets["title_logo_spine"] = None
+            self.assets["title_logo_back"] = None
+
+        self.update_override_states()
+        self.update_preview()
+
+    def clear_system_logo(self, target):
+
+        key = "system_logo_default" if target == "default" else f"system_logo_{target}"
+        self.assets[key] = None
+
+        if target == "default":
+            self.assets["system_logo_front"] = None
+            self.assets["system_logo_spine"] = None
+            self.assets["system_logo_back"] = None
+
+        self.update_override_states()
+        self.update_preview()
 
     # ========================================================
     # UI
@@ -301,6 +353,9 @@ class CassetteApp(tk.Tk):
         color_frame = ttk.LabelFrame(top_center, text="Cover Colors", padding=8)
         color_frame.pack(side="left", padx=12)
 
+        self.color_hex_vars = {}
+        self.color_preview_boxes = {}
+
         for key in ("back", "spine", "banner", "text"):
             row = ttk.Frame(color_frame)
             row.pack(anchor="w", pady=2)
@@ -309,10 +364,12 @@ class CassetteApp(tk.Tk):
 
             # Color preview square
             preview = tk.Label(row, width=2, background=self._rgb_to_hex(self.colors[key]))
+            self.color_preview_boxes[key] = preview
             preview.pack(side="left", padx=4)
 
             # Hex entry
             hex_var = tk.StringVar(value=self._rgb_to_hex(self.colors[key]))
+            self.color_hex_vars[key] = hex_var
             entry = ttk.Entry(row, textvariable=hex_var, width=9)
             entry.pack(side="left", padx=4)
 
@@ -391,9 +448,26 @@ class CassetteApp(tk.Tk):
         for side in ("front", "spine", "back"):
             row = ttk.Frame(nfc_frame)
             row.pack(anchor="w")
+
             ttk.Label(row, text=side.capitalize(), width=6).pack(side="left")
-            ttk.Button(row, text="White", command=lambda s=side: set_nfc(s, "white")).pack(side="left")
-            ttk.Button(row, text="Black", command=lambda s=side: set_nfc(s, "black")).pack(side="left")
+
+            ttk.Button(
+                row,
+                text="White",
+                command=lambda s=side: set_nfc(s, "white")
+            ).pack(side="left")
+
+            ttk.Button(
+                row,
+                text="Black",
+                command=lambda s=side: set_nfc(s, "black")
+            ).pack(side="left")
+
+            ttk.Button(
+                row,
+                text="None",
+                command=lambda s=side: set_nfc(s, "none")
+            ).pack(side="left")
 
         # --------------------------------------------------------
         # Asset loading
@@ -454,6 +528,15 @@ class CassetteApp(tk.Tk):
                     command=make_search_cmd(key)
                 )
 
+            # -------- CLEAR OPTION --------
+            menu.add_separator()
+
+            menu.add_command(
+                label="Clear",
+                command=lambda k=key: self.clear_asset(k)
+            )
+            # ------------------------------
+
             menu_button["menu"] = menu
 
             if key == "poster":
@@ -461,6 +544,7 @@ class CassetteApp(tk.Tk):
 
             menu_button.grid(row=1, column=i, padx=6, pady=6)
 
+            
         # --------------------------------------------------
         # TITLE LOGO (NESTED MENU LIKE SYSTEM LOGO)
         # --------------------------------------------------
@@ -491,8 +575,15 @@ class CassetteApp(tk.Tk):
             label="Search...",
             command=lambda: self.open_search_window("title_logo_default")
         )
-        self.title_logo_all_search_index = title_all_menu.index("end")
 
+        title_all_menu.add_separator()
+
+        title_all_menu.add_command(
+            label="Clear",
+            command=lambda: self.clear_title_logo("default")
+        )
+
+        self.title_logo_all_search_index = title_all_menu.index("end")
         self.title_logo_all_menu = title_all_menu
 
         title_menu.add_cascade(label="All Sides", menu=title_all_menu)
@@ -521,6 +612,13 @@ class CassetteApp(tk.Tk):
             sub.add_command(
                 label="Search...",
                 command=lambda s=side: self.open_search_window(f"title_logo_{s}")
+            )
+
+            sub.add_separator()
+
+            sub.add_command(
+                label="Clear",
+                command=lambda s=side: self.clear_title_logo(s)
             )
 
             # Store override menu reference
@@ -567,6 +665,14 @@ class CassetteApp(tk.Tk):
             label="Search Folder...",
             command=lambda: self.search_system_logo_folder("default")
         )
+
+        all_menu.add_separator()
+
+        all_menu.add_command(
+            label="Clear",
+            command=lambda: self.clear_system_logo("default")
+        )
+
         self.system_search_default_index = all_menu.index("end")
 
         system_menu.add_cascade(label="All Sides", menu=all_menu)
@@ -596,6 +702,13 @@ class CassetteApp(tk.Tk):
                 command=lambda s=side: self.search_system_logo_folder(s)
             )
 
+            sub.add_separator()
+
+            sub.add_command(
+                label="Clear",
+                command=lambda s=side: self.clear_system_logo(s)
+            )
+
             # Store reference
             self.system_logo_override_menus[side] = sub
 
@@ -611,6 +724,19 @@ class CassetteApp(tk.Tk):
 
         system_btn["menu"] = system_menu
         system_btn.grid(row=1, column=4, padx=6, pady=6)
+
+        # --------------------------------------------------------
+        # Poster Editor Button (hidden until poster exists)
+        # --------------------------------------------------------
+
+        self.poster_editor_btn = ttk.Button(
+            asset_frame,
+            text="Poster Editor",
+            command=self.open_poster_editor
+        )
+
+        self.poster_editor_btn.grid(row=1, column=5, padx=6, pady=6)
+        self.poster_editor_btn.grid_remove()
 
         self.system_logo_menu = system_menu
         self.update_override_states()
@@ -696,6 +822,20 @@ class CassetteApp(tk.Tk):
             text="Export As...",
             width=16,
             command=self.export_cover_as
+        ).pack(side="left", padx=8)
+
+        ttk.Button(
+            bottom_frame,
+            text="Load Template",
+            width=16,
+            command=self.load_template
+        ).pack(side="left", padx=8)
+
+        ttk.Button(
+            bottom_frame,
+            text="Save Template",
+            width=16,
+            command=self.save_template
         ).pack(side="left", padx=8)
 
         self.open_output_btn = ttk.Button(
@@ -1016,7 +1156,38 @@ class CassetteApp(tk.Tk):
 
         # FRONT
         if self.assets["poster"]:
+
             poster = self.crop_poster(self.assets["poster"], FRONT_W, POSTER_H)
+
+            # ---------------------------------
+            # Apply Poster Editor overlays
+            # ---------------------------------
+            if self.poster_overlays:
+
+                poster = poster.convert("RGBA")
+
+                scale_x = FRONT_W / self.editor_w
+                scale_y = POSTER_H / self.editor_h
+
+                for overlay in self.poster_overlays:
+                    overlay_img = overlay["image"].copy()
+
+                    w, h = overlay_img.size
+                    overlay_img = overlay_img.resize(
+                        (
+                            int(w * overlay["scale"] * scale_x),
+                            int(h * overlay["scale"] * scale_y)
+                        ),
+                        Image.LANCZOS
+                    )
+
+                    x = int((overlay["x"] * scale_x) - overlay_img.width / 2)
+                    y = int((overlay["y"] * scale_y) - overlay_img.height / 2)
+
+                    poster.paste(overlay_img, (x, y), overlay_img)
+
+                poster = poster.convert("RGB")
+
             img.paste(poster, (FRONT_X, BANNER_H))
 
         logo = self.assets["system_logo_front"] or self.assets["system_logo_default"]
@@ -1029,16 +1200,19 @@ class CassetteApp(tk.Tk):
                 logo_img
             )
         # NFC FRONT
-        nfc_front = fit_image(
-            self.nfc_logos[self.nfc_logo_colors["front"]],
-            *NFC_FRONT_MAX
-        )
+        mode = self.nfc_logo_colors["front"]
 
-        img.paste(
-            nfc_front,
-            (CARD_W - nfc_front.width - NFC_MARGIN, NFC_MARGIN),
-            nfc_front
-        )
+        if mode != "none":
+            nfc_front = fit_image(
+                self.nfc_logos[mode],
+                *NFC_FRONT_MAX
+            )
+
+            img.paste(
+                nfc_front,
+                (CARD_W - nfc_front.width - NFC_MARGIN, NFC_MARGIN),
+                nfc_front
+            )
         # SPINE
         logo = self.assets["system_logo_spine"] or self.assets["system_logo_default"]
 
@@ -1064,27 +1238,35 @@ class CassetteApp(tk.Tk):
                 title_spine
             )
 
-        nfc_spine = fit_image(self.nfc_logos[self.nfc_logo_colors["spine"]], *NFC_SPINE_MAX).rotate(-90, expand=True)
-        img.paste(
-            nfc_spine,
-            (
-                BACK_W + (SPINE_W - nfc_spine.width) // 2,
-                CARD_H - nfc_spine.height - NFC_MARGIN
-            ),
-            nfc_spine
-        )
+        mode = self.nfc_logo_colors["spine"]
+
+        if mode != "none":
+            nfc_spine = fit_image(
+                self.nfc_logos[mode],
+                *NFC_SPINE_MAX
+            ).rotate(-90, expand=True)
+
+            img.paste(
+                nfc_spine,
+                (
+                    BACK_W + (SPINE_W - nfc_spine.width) // 2,
+                    CARD_H - nfc_spine.height - NFC_MARGIN
+                ),
+                nfc_spine
+            )
 
         # BACK
         y = PADDING
 
-        # --------------------------------------------------
-        # Pre-calc back logos (needed for summary height)
-        # --------------------------------------------------
+        mode = self.nfc_logo_colors["back"]
 
-        nfc_back = fit_image(
-            self.nfc_logos[self.nfc_logo_colors["back"]],
-            *NFC_BACK_MAX
-        )
+        nfc_back = None
+
+        if mode != "none":
+            nfc_back = fit_image(
+                self.nfc_logos[mode],
+                *NFC_BACK_MAX
+            )
 
         back_logo_asset = self.assets["system_logo_back"] or self.assets["system_logo_default"]
 
@@ -1107,7 +1289,10 @@ class CassetteApp(tk.Tk):
 
         if self.assets["summary"]:
             # Calculate bottom limit dynamically
-            bottom_reserved = NFC_MARGIN + nfc_back.height + BACK_GAP
+            bottom_reserved = NFC_MARGIN + BACK_GAP
+
+            if nfc_back:
+                bottom_reserved += nfc_back.height
 
             if sys_back:
                 bottom_reserved += sys_back.height + BACK_GAP
@@ -1201,7 +1386,10 @@ class CassetteApp(tk.Tk):
         original_cover = self.assets["original_cover_back"]
 
         # Calculate base Y positions
-        nfc_y = CARD_H - nfc_back.height - NFC_MARGIN
+        if nfc_back:
+            nfc_y = CARD_H - nfc_back.height - NFC_MARGIN
+        else:
+            nfc_y = CARD_H - NFC_MARGIN
 
         sys_y = None
         if sys_back:
@@ -1231,11 +1419,12 @@ class CassetteApp(tk.Tk):
             )
 
         # --- Paste NFC back ---
-        img.paste(
-            nfc_back,
-            ((BACK_W - nfc_back.width) // 2, nfc_y),
-            nfc_back
-        )
+        if nfc_back:
+            img.paste(
+                nfc_back,
+                ((BACK_W - nfc_back.width) // 2, nfc_y),
+                nfc_back
+            )
 
         return img
 
@@ -1248,6 +1437,18 @@ class CassetteApp(tk.Tk):
         preview = img.resize((int(CARD_W * 0.35), int(CARD_H * 0.35)), Image.LANCZOS)
         self.tk_img = ImageTk.PhotoImage(preview)
         self.preview_label.configure(image=self.tk_img)
+
+    def refresh_color_ui(self):
+
+        for key, rgb in self.colors.items():
+
+            hex_value = self._rgb_to_hex(rgb)
+
+            if key in self.color_hex_vars:
+                self.color_hex_vars[key].set(hex_value)
+
+            if key in self.color_preview_boxes:
+                self.color_preview_boxes[key].config(background=hex_value)
 
     def _rgb_to_hex(self, rgb):
         return "#{:02x}{:02x}{:02x}".format(*rgb)
@@ -1266,12 +1467,22 @@ class CassetteApp(tk.Tk):
             self.open_output_btn.config(state="disabled")
 
     def update_crop_visibility(self):
+
         if self.assets.get("poster"):
+
             if not self.crop_frame.winfo_ismapped():
                 self.crop_frame.pack(side="left", padx=10)
+
+            if hasattr(self, "poster_editor_btn"):
+                self.poster_editor_btn.grid()
+
         else:
+
             if self.crop_frame.winfo_ismapped():
                 self.crop_frame.pack_forget()
+
+            if hasattr(self, "poster_editor_btn"):
+                self.poster_editor_btn.grid_remove()
 
     def update_poster_orientation(self):
         poster = self.assets.get("poster")
@@ -1353,6 +1564,213 @@ class CassetteApp(tk.Tk):
                 self.crop_slider.pack_forget()
 
         self.update_preview()
+
+    def get_template_dir(self):
+        path = os.path.join(BASE_DIR, "templates")
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    def save_template(self):
+
+        name = simpledialog.askstring(
+            "Save Template",
+            "Template name:",
+            parent=self
+        )
+
+        if not name:
+            return
+
+        # -------------------------------
+        # Template Export Options Window
+        # -------------------------------
+
+        win = tk.Toplevel(self)
+        win.title("Template Options")
+        win.geometry("260x180")
+        win.resizable(False, False)
+        win.grab_set()
+
+        ttk.Label(win, text="Include in template:").pack(pady=(10, 5))
+
+        colors_var = tk.BooleanVar(value=True)
+        nfc_var = tk.BooleanVar(value=True)
+        system_logo_var = tk.BooleanVar(value=True)
+
+        ttk.Checkbutton(
+            win,
+            text="Colors",
+            variable=colors_var
+        ).pack(anchor="w", padx=20)
+
+        ttk.Checkbutton(
+            win,
+            text="NFC Logo Modes",
+            variable=nfc_var
+        ).pack(anchor="w", padx=20)
+
+        ttk.Checkbutton(
+            win,
+            text="System Logo",
+            variable=system_logo_var
+        ).pack(anchor="w", padx=20)
+
+        def confirm():
+
+            template = {
+                "version": 1
+            }
+
+            # -------------------------------
+            # Colors
+            # -------------------------------
+
+            if colors_var.get():
+                template["colors"] = {
+                    k: list(v) for k, v in self.colors.items()
+                }
+
+            # -------------------------------
+            # NFC logos
+            # -------------------------------
+
+            if nfc_var.get():
+                template["nfc_logo"] = self.nfc_logo_colors.copy()
+
+            # -------------------------------
+            # System logo
+            # -------------------------------
+
+            if system_logo_var.get():
+
+                paths = {
+                    k: v for k, v in self.system_logo_paths.items() if v
+                }
+
+                if paths:
+                    template["system_logo_paths"] = paths
+
+            template_dir = self.get_template_dir()
+            path = os.path.join(template_dir, f"{name}.json")
+
+            try:
+
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(template, f, indent=2)
+
+                messagebox.showinfo(
+                    "Template Saved",
+                    f"Template '{name}' saved."
+                )
+
+                win.destroy()
+
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
+        ttk.Button(
+            win,
+            text="Save Template",
+            command=confirm
+        ).pack(pady=10)
+
+    def load_template(self):
+
+        template_dir = self.get_template_dir()
+
+        files = [
+            f for f in os.listdir(template_dir)
+            if f.lower().endswith(".json")
+        ]
+
+        if not files:
+            messagebox.showinfo("Templates", "No templates found.")
+            return
+
+        win = tk.Toplevel(self)
+        win.title("Load Template")
+        win.geometry("300x300")
+        win.grab_set()
+
+        listbox = tk.Listbox(win)
+        listbox.pack(fill="both", expand=True, padx=10, pady=10)
+
+        for f in files:
+            listbox.insert("end", f)
+
+        def load_selected():
+            sel = listbox.curselection()
+            if not sel:
+                return
+
+            file = files[sel[0]]
+            path = os.path.join(template_dir, file)
+
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+
+                # Load colors
+                if "colors" in data:
+                    for k, v in data["colors"].items():
+                        self.colors[k] = tuple(v)
+                        self.config_data.setdefault("colors", {})[k] = v
+
+                # Load NFC logo modes
+                if "nfc_logo" in data:
+                    self.nfc_logo_colors = data["nfc_logo"]
+                    self.config_data["nfc_logo"] = self.nfc_logo_colors
+
+                # Load system logos
+                if "system_logo_paths" in data:
+
+                    for target, path in data["system_logo_paths"].items():
+
+                        try:
+
+                            if path.startswith(("http://", "https://")):
+
+                                response = requests.get(
+                                    path,
+                                    timeout=10,
+                                    headers={"User-Agent": "Mozilla/5.0"}
+                                )
+
+                                response.raise_for_status()
+
+                                img = Image.open(BytesIO(response.content)).convert("RGBA")
+
+                            else:
+
+                                if not os.path.exists(path):
+                                    continue
+
+                                img = load_image_from_file(path)
+
+                            key = "system_logo_default" if target == "default" else f"system_logo_{target}"
+
+                            self.assets[key] = img
+                            self.system_logo_paths[target] = path
+
+                        except Exception as e:
+                            print("Failed loading system logo:", e)
+
+                save_config(self.config_data)
+
+                self.refresh_color_ui()
+                self.update_override_states()
+                self.update_preview()
+
+                win.destroy()
+
+            except Exception as e:
+                messagebox.showerror("Error", str(e))
+
+        ttk.Button(
+            win,
+            text="Load",
+            command=load_selected
+        ).pack(pady=6)
 
     def export_cover(self):
         output_dir = self.config_data.get("output_dir", "output")
@@ -1441,21 +1859,27 @@ class CassetteApp(tk.Tk):
         return img
 
     def load_system_logo(self, target, source):
+
         if target != "default" and not self.assets["system_logo_default"]:
             return
 
         try:
+
             if source == "file":
+
                 path = filedialog.askopenfilename(
                     filetypes=[("Images", "*.png *.jpg *.jpeg *.webp")]
                 )
+
                 if not path:
                     return
 
                 img = load_image_from_file(path)
 
             else:
+
                 url = self.ask_url()
+
                 if not url or not url.startswith(("http://", "https://")):
                     return
 
@@ -1464,20 +1888,29 @@ class CassetteApp(tk.Tk):
                     timeout=10,
                     headers={"User-Agent": "Mozilla/5.0"}
                 )
+
                 response.raise_for_status()
 
                 img = Image.open(BytesIO(response.content)).convert("RGBA")
+
                 img = self.maybe_cache_web_logo(img, url)
+
+                path = url
 
             key = "system_logo_default" if target == "default" else f"system_logo_{target}"
 
-            # If setting new default, clear overrides
+            # Clear overrides if default changes
             if target == "default":
                 self.assets["system_logo_front"] = None
                 self.assets["system_logo_spine"] = None
                 self.assets["system_logo_back"] = None
 
+                self.system_logo_paths["front"] = None
+                self.system_logo_paths["spine"] = None
+                self.system_logo_paths["back"] = None
+
             self.assets[key] = img
+            self.system_logo_paths[target] = path
 
             self.update_override_states()
             self.update_preview()
@@ -1699,6 +2132,8 @@ class CassetteApp(tk.Tk):
 
                     self.assets[key] = full_img
 
+                    self.system_logo_paths[target] = p
+                  
                     self.update_override_states()
                     self.update_preview()
                     win.destroy()
@@ -2272,6 +2707,452 @@ class CassetteApp(tk.Tk):
 
             except:
                 continue
+
+    # ========================================================
+    # POSTER EDITOR
+    # ========================================================
+
+    def open_poster_editor(self):
+
+        if not self.assets.get("poster"):
+            messagebox.showerror("Error", "Load a poster first.")
+            return
+
+        self.editor_window = tk.Toplevel(self)
+        win = self.editor_window
+        win.title("Poster Editor")
+        win.geometry("900x820")
+        win.grab_set()
+
+        poster = self.assets["poster"]
+
+        preview = poster.copy()
+
+        # scale poster to fill canvas height
+        editor_h = 700
+        editor_w = int(editor_h * FRONT_W / POSTER_H)
+
+        preview = poster.copy()
+        preview = self.crop_poster(preview, FRONT_W, POSTER_H)
+        preview = preview.resize((editor_w, editor_h), Image.LANCZOS)
+
+        pw, ph = preview.size
+
+        canvas = tk.Canvas(
+            win,
+            width=editor_w,
+            height=editor_h,
+            bg="#222",
+            highlightthickness=0
+        )
+
+        self.editor_canvas = canvas
+        self.selected_overlay = None
+        self.drag_offset_x = 0
+        self.drag_offset_y = 0
+
+        canvas.pack(pady=10)
+
+        tk_img = ImageTk.PhotoImage(preview)
+        canvas.image = tk_img
+
+        canvas.create_image(editor_w // 2, editor_h // 2, image=tk_img)
+
+        # store editor size
+        self.editor_w = editor_w
+        self.editor_h = editor_h
+
+        self.redraw_editor(canvas)
+
+        canvas.bind("<Button-1>", self.select_overlay)
+        canvas.bind("<B1-Motion>", self.drag_overlay)
+        canvas.bind("<ButtonRelease-1>", self.release_overlay)
+        
+
+
+        # --------------------------------------------------
+        # Toolbar
+        # --------------------------------------------------
+
+        toolbar = ttk.Frame(win)
+        toolbar.pack(fill="x")
+
+        ttk.Button(
+            toolbar,
+            text="Add Overlay (File)",
+            command=lambda: self.add_overlay_file(canvas)
+        ).pack(side="left", padx=5, pady=5)
+
+        ttk.Button(
+            toolbar,
+            text="Add Overlay (URL)",
+            command=lambda: self.add_overlay_url(canvas)
+        ).pack(side="left", padx=5, pady=5)
+
+        ttk.Button(
+            toolbar,
+            text="Delete Overlay",
+            command=self.delete_selected_overlay
+        ).pack(side="left", padx=5, pady=5)
+
+        ttk.Button(
+            toolbar,
+            text="Layer Up",
+            command=self.overlay_layer_up
+        ).pack(side="left", padx=5, pady=5)
+
+        ttk.Button(
+            toolbar,
+            text="Layer Down",
+            command=self.overlay_layer_down
+        ).pack(side="left", padx=5, pady=5)
+
+        ttk.Button(
+            toolbar,
+            text="Clear Overlays",
+            command=self.clear_all_overlays
+        ).pack(side="left", padx=5, pady=5)
+
+        ttk.Button(
+            toolbar,
+            text="Apply To Cover",
+            command=self.apply_poster_editor_result
+        ).pack(side="left", padx=5, pady=5)
+
+    def add_overlay_file(self, canvas):
+
+        path = filedialog.askopenfilename(
+            filetypes=[("Images", "*.png *.jpg *.jpeg *.webp")]
+        )
+
+        if not path:
+            return
+
+        try:
+            img = Image.open(path).convert("RGBA")
+
+            # Auto resize if too large for editor
+            max_size = 500
+            iw, ih = img.size
+
+            scale = 1.0
+            if iw > max_size or ih > max_size:
+                scale = min(max_size / iw, max_size / ih)
+
+            self.poster_overlays.append({
+                "image": img,
+                "x": self.editor_w // 2,
+                "y": self.editor_h // 2,
+                "scale": scale
+            })
+
+            self.redraw_editor(canvas)
+
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def add_overlay_url(self, canvas):
+
+        url = self.ask_url()
+
+        if not url or not url.startswith(("http://", "https://")):
+            return
+
+        try:
+            r = requests.get(url, timeout=10)
+            r.raise_for_status()
+
+            img = Image.open(BytesIO(r.content)).convert("RGBA")
+
+            # Auto resize if too large for editor
+            max_size = 500
+            iw, ih = img.size
+
+            scale = 1.0
+            if iw > max_size or ih > max_size:
+                scale = min(max_size / iw, max_size / ih)
+
+            self.poster_overlays.append({
+                "image": img,
+                "x": self.editor_w // 2,
+                "y": self.editor_h // 2,
+                "scale": scale
+            })
+
+            self.redraw_editor(canvas)
+
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def redraw_editor(self, canvas):
+
+        canvas.delete("overlay")
+        canvas.delete("handle")
+
+        for overlay in self.poster_overlays:
+
+            img = overlay["image"].copy()
+            scale = overlay["scale"]
+
+            w, h = img.size
+            img = img.resize((int(w * scale), int(h * scale)), Image.LANCZOS)
+
+            tk_img = ImageTk.PhotoImage(img)
+            overlay["tk_img"] = tk_img
+
+            x = overlay["x"]
+            y = overlay["y"]
+
+            item = canvas.create_image(
+                x,
+                y,
+                image=tk_img,
+                anchor="center",
+                tags=("overlay",)
+            )
+
+            overlay["canvas_id"] = item
+            overlay["width"] = img.width
+            overlay["height"] = img.height
+
+            # Draw selection outline if active
+            if overlay == self.selected_overlay:
+                canvas.create_rectangle(
+                    x - img.width // 2,
+                    y - img.height // 2,
+                    x + img.width // 2,
+                    y + img.height // 2,
+                    outline="#00A2FF",
+                    width=2,
+                    tags=("overlay",)
+                )
+
+            # ---- draw resize handles ----
+            half_w = img.width // 2
+            half_h = img.height // 2
+
+            corners = [
+                (x - half_w, y - half_h),
+                (x + half_w, y - half_h),
+                (x - half_w, y + half_h),
+                (x + half_w, y + half_h),
+            ]
+
+            overlay["handles"] = []
+
+            for cx, cy in corners:
+                handle = canvas.create_rectangle(
+                    cx - EDITOR_HANDLE_SIZE,
+                    cy - EDITOR_HANDLE_SIZE,
+                    cx + EDITOR_HANDLE_SIZE,
+                    cy + EDITOR_HANDLE_SIZE,
+                    fill="white",
+                    outline="black",
+                    tags=("handle",)
+                )
+
+                overlay["handles"].append(handle)
+
+    def select_overlay(self, event):
+
+        self.selected_overlay = None
+        self.resize_mode = False
+        
+        canvas = self.editor_canvas
+
+        item = canvas.find_closest(event.x, event.y)
+        
+        # Check handles first
+        for overlay in self.poster_overlays:
+            if item[0] in overlay.get("handles", []):
+                self.selected_overlay = overlay
+                self.resize_mode = True
+
+                # Store starting scale and distance
+                cx = overlay["x"]
+                cy = overlay["y"]
+
+                dx = event.x - cx
+                dy = event.y - cy
+
+                self.resize_start_distance = max((dx ** 2 + dy ** 2) ** 0.5, 1)
+                self.resize_start_scale = overlay["scale"]
+
+                return
+
+        # Otherwise check overlay image
+        for overlay in self.poster_overlays:
+            if overlay.get("canvas_id") == item[0]:
+                self.selected_overlay = overlay
+                self.resize_mode = False
+                self.drag_offset_x = overlay["x"] - event.x
+                self.drag_offset_y = overlay["y"] - event.y
+                return
+
+    def drag_overlay(self, event):
+
+        if not self.selected_overlay:
+            return
+
+        if getattr(self, "resize_mode", False):
+
+            overlay = self.selected_overlay
+
+            cx = overlay["x"]
+            cy = overlay["y"]
+
+            dx = event.x - cx
+            dy = event.y - cy
+
+            current_distance = max((dx ** 2 + dy ** 2) ** 0.5, 1)
+
+            scale_ratio = current_distance / self.resize_start_distance
+
+            overlay["scale"] = self.resize_start_scale * scale_ratio
+
+            # Clamp scale
+            overlay["scale"] = max(0.005, min(overlay["scale"], 5))
+
+        else:
+
+            overlay = self.selected_overlay
+
+            new_x = event.x + self.drag_offset_x
+            new_y = event.y + self.drag_offset_y
+
+            half_w = overlay["width"] // 2
+            half_h = overlay["height"] // 2
+
+            min_x = half_w
+            max_x = self.editor_w - half_w
+
+            min_y = half_h
+            max_y = self.editor_h - half_h
+
+            new_x = max(min_x, min(max_x, new_x))
+            new_y = max(min_y, min(max_y, new_y))
+
+            overlay["x"] = new_x
+            overlay["y"] = new_y
+
+        self.redraw_editor(self.editor_canvas)
+
+    def release_overlay(self, event):
+        self.resize_mode = False
+        self.redraw_editor(self.editor_canvas)
+
+    def delete_selected_overlay(self):
+
+        if not self.selected_overlay:
+            return
+
+        if self.selected_overlay in self.poster_overlays:
+            self.poster_overlays.remove(self.selected_overlay)
+
+        self.selected_overlay = None
+
+        if hasattr(self, "editor_canvas"):
+            self.redraw_editor(self.editor_canvas)
+
+    def overlay_layer_up(self):
+
+        if not self.selected_overlay:
+            return
+
+        i = self.poster_overlays.index(self.selected_overlay)
+
+        if i < len(self.poster_overlays) - 1:
+            self.poster_overlays[i], self.poster_overlays[i + 1] = \
+                self.poster_overlays[i + 1], self.poster_overlays[i]
+
+        self.redraw_editor(self.editor_canvas)
+
+    def overlay_layer_down(self):
+
+        if not self.selected_overlay:
+            return
+
+        i = self.poster_overlays.index(self.selected_overlay)
+
+        if i > 0:
+            self.poster_overlays[i], self.poster_overlays[i - 1] = \
+                self.poster_overlays[i - 1], self.poster_overlays[i]
+
+        self.redraw_editor(self.editor_canvas)
+
+    def clear_all_overlays(self):
+
+        if not self.poster_overlays:
+            return
+
+        confirm = messagebox.askyesno(
+            "Clear Overlays",
+            "Remove all overlays from the poster?"
+        )
+
+        if not confirm:
+            return
+
+        self.poster_overlays.clear()
+        self.selected_overlay = None
+
+        if hasattr(self, "editor_canvas"):
+            self.redraw_editor(self.editor_canvas)
+
+    def apply_poster_editor_result(self):
+
+        if not self.assets.get("poster"):
+            return
+
+        # Confirmation dialog
+        confirm = messagebox.askyesno(
+            "Apply Poster Edits",
+            "This will permanently merge the overlays into the poster.\n\n"
+            "You will NOT be able to edit them afterwards.\n\n"
+            "Continue?"
+        )
+
+        if not confirm:
+            return
+
+        poster = self.crop_poster(self.assets["poster"], FRONT_W, POSTER_H).convert("RGBA")
+
+        scale_x = FRONT_W / self.editor_w
+        scale_y = POSTER_H / self.editor_h
+
+        for overlay in self.poster_overlays:
+            overlay_img = overlay["image"].copy()
+
+            w, h = overlay_img.size
+
+            overlay_img = overlay_img.resize(
+                (
+                    int(w * overlay["scale"] * scale_x),
+                    int(h * overlay["scale"] * scale_y)
+                ),
+                Image.LANCZOS
+            )
+
+            x = int((overlay["x"] * scale_x) - overlay_img.width / 2)
+            y = int((overlay["y"] * scale_y) - overlay_img.height / 2)
+
+            poster.paste(overlay_img, (x, y), overlay_img)
+
+        poster = poster.convert("RGBA")
+
+        # Replace poster in main app
+        self.assets["poster"] = poster
+
+        # Clear editor overlays
+        self.poster_overlays.clear()
+        self.selected_overlay = None
+
+        # Refresh preview
+        self.update_preview()
+
+        # Close editor window
+        if hasattr(self, "editor_window") and self.editor_window.winfo_exists():
+            self.editor_window.destroy()
 
     # ========================================================
     # CUSTOM URL DIALOG
