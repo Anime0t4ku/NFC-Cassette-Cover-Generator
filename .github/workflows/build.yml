@@ -32,13 +32,13 @@ jobs:
       - name: Build Windows executable
         shell: cmd
         working-directory: nfc-cassette-cover-generator
-        run: pyinstaller --clean nfc-cassette-cover-generator.py --onefile --noconsole --name nfc-cassette-cover-generator --add-data "icon.png;." --add-data "assets;assets" --icon app.ico
+        run: pyinstaller --clean --onefile --windowed --icon app.ico --add-data "icon.png;." --add-data "assets;assets" --name NFC-Cassette-Cover-Generator nfc-cassette-cover-generator.py
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v6
         with:
           name: NFC-Cassette-Cover-Generator-Windows-x86_64
-          path: nfc-cassette-cover-generator/dist/
+          path: nfc-cassette-cover-generator/dist/NFC-Cassette-Cover-Generator.exe
 
 
   # =====================================================
@@ -57,27 +57,30 @@ jobs:
         with:
           python-version: "3.13"
 
+      # Required for Tkinter / ImageTk (Pillow previews)
+      - name: Install Tkinter
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk
+
       - name: Install dependencies
         working-directory: nfc-cassette-cover-generator
         run: |
           python -m pip install --upgrade pip
           pip install pillow requests pyinstaller
 
-      - name: Build Linux binary
+      - name: Build Linux executable
         working-directory: nfc-cassette-cover-generator
-        run: pyinstaller --clean nfc-cassette-cover-generator.py --onefile --noconsole --name nfc-cassette-cover-generator --add-data "icon.png:." --add-data "assets:assets"
+        run: pyinstaller --clean --onefile --windowed --add-data "icon.png:." --add-data "assets:assets" --name NFC-Cassette-Cover-Generator nfc-cassette-cover-generator.py
 
-      - name: Package Linux tar.gz
-        run: |
-          mkdir release
-          cp nfc-cassette-cover-generator/dist/nfc-cassette-cover-generator release/
-          tar -czvf NFC-Cassette-Cover-Generator-Linux-x86_64.tar.gz -C release .
+      - name: Make binary executable
+        run: chmod +x nfc-cassette-cover-generator/dist/NFC-Cassette-Cover-Generator
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v6
         with:
           name: NFC-Cassette-Cover-Generator-Linux-x86_64
-          path: NFC-Cassette-Cover-Generator-Linux-x86_64.tar.gz
+          path: nfc-cassette-cover-generator/dist/NFC-Cassette-Cover-Generator
 
 
   # =====================================================
@@ -95,33 +98,28 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download Windows Artifact
+      - name: Download artifacts
         uses: actions/download-artifact@v7
         with:
-          name: NFC-Cassette-Cover-Generator-Windows-x86_64
-          path: release/windows
+          path: dist
+          merge-multiple: true
 
-      - name: Download Linux Artifact
-        uses: actions/download-artifact@v7
-        with:
-          name: NFC-Cassette-Cover-Generator-Linux-x86_64
-          path: release/linux
-
-      - name: Create Windows ZIP
+      - name: Zip Windows build
         run: |
-          cd release/windows
-          zip -r ../../NFC-Cassette-Cover-Generator-Windows-x86_64.zip .
+          cd dist
+          zip ../NFC-Cassette-Cover-Generator-Windows-x86_64.zip NFC-Cassette-Cover-Generator.exe
 
-      - name: Move Linux tar.gz
+      - name: Tar Linux build
         run: |
-          cp release/linux/NFC-Cassette-Cover-Generator-Linux-x86_64.tar.gz .
+          cd dist
+          tar -czvf ../NFC-Cassette-Cover-Generator-Linux-x86_64.tar.gz NFC-Cassette-Cover-Generator
 
       - name: Update Git Tag
         run: |
           git tag -f Pre-release
           git push -f origin Pre-release
 
-      - name: Create Release
+      - name: Create or Update Release
         uses: ncipollo/release-action@v1
         with:
           prerelease: true
