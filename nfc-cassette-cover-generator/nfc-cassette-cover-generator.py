@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageTk, ImageFont
 # CONFIG
 # ============================================================
 
-APP_TITLE = "Cassette Cover Generator v2.0.0 by Anime0t4ku"
+APP_TITLE = "Cassette Cover Generator v2.1.0 by Anime0t4ku"
 CONFIG_FILE = "config.json"
 BASE_DIR = os.path.abspath(".")
 WEB_IMAGE_DIR = os.path.join(BASE_DIR, "web-images")
@@ -1316,8 +1316,22 @@ class CassetteApp(tk.Tk):
 
             # Safe font loading
             try:
-                font = ImageFont.truetype("arialbd.ttf", 32)
-            except:
+                # Windows
+                if sys.platform.startswith("win"):
+                    font = ImageFont.truetype("arialbd.ttf", 32)
+
+                # Linux
+                elif sys.platform.startswith("linux"):
+                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32)
+
+                # macOS
+                elif sys.platform == "darwin":
+                    font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 32)
+
+                else:
+                    font = ImageFont.load_default()
+
+            except Exception:
                 font = ImageFont.load_default()
 
             max_width = text_box.width
@@ -1813,6 +1827,7 @@ class CassetteApp(tk.Tk):
             messagebox.showerror("Export Failed", str(e))
 
     def open_output_folder(self):
+
         output_dir = self.config_data.get("output_dir", "output")
 
         if not output_dir:
@@ -1826,12 +1841,23 @@ class CassetteApp(tk.Tk):
             return
 
         try:
+            path = os.path.abspath(output_dir)
+
             if sys.platform.startswith("win"):
-                os.startfile(output_dir)
-            elif sys.platform.startswith("darwin"):
-                subprocess.run(["open", output_dir])
-            else:
-                subprocess.run(["xdg-open", output_dir])
+                subprocess.Popen(["explorer", path])
+
+            elif sys.platform.startswith("linux"):
+                env = os.environ.copy()
+                subprocess.Popen(
+                    ["gio", "open", path],
+                    env=env,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", path])
+
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
@@ -2092,17 +2118,26 @@ class CassetteApp(tk.Tk):
         scrollbar.pack(side="right", fill="y")
 
         # --------------------------------------------------
-        # Mouse Wheel Support
+        # Mouse Wheel Support (Windows / Mac / Linux)
         # --------------------------------------------------
 
         def _on_mousewheel(event):
             canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        def _on_linux_scroll_up(event):
+            canvas.yview_scroll(-1, "units")
 
-        # Clean up binding when window closes
+        def _on_linux_scroll_down(event):
+            canvas.yview_scroll(1, "units")
+
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        canvas.bind_all("<Button-4>", _on_linux_scroll_up)
+        canvas.bind_all("<Button-5>", _on_linux_scroll_down)
+
         def _unbind_mousewheel():
             canvas.unbind_all("<MouseWheel>")
+            canvas.unbind_all("<Button-4>")
+            canvas.unbind_all("<Button-5>")
 
         win.protocol("WM_DELETE_WINDOW", lambda: (_unbind_mousewheel(), win.destroy()))
 
@@ -2124,16 +2159,14 @@ class CassetteApp(tk.Tk):
 
                     key = "system_logo_default" if target == "default" else f"system_logo_{target}"
 
-                    # If setting new default, clear overrides
                     if target == "default":
                         self.assets["system_logo_front"] = None
                         self.assets["system_logo_spine"] = None
                         self.assets["system_logo_back"] = None
 
                     self.assets[key] = full_img
-
                     self.system_logo_paths[target] = p
-                  
+
                     self.update_override_states()
                     self.update_preview()
                     win.destroy()
@@ -2565,17 +2598,26 @@ class CassetteApp(tk.Tk):
         scrollbar.pack(side="right", fill="y")
 
         # --------------------------------------------------
-        # Mouse Wheel Support
+        # Mouse Wheel Support (Windows / Mac / Linux)
         # --------------------------------------------------
 
         def _on_mousewheel(event):
             canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
-        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        def _on_linux_scroll_up(event):
+            canvas.yview_scroll(-1, "units")
 
-        # Clean up binding when window closes
+        def _on_linux_scroll_down(event):
+            canvas.yview_scroll(1, "units")
+
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        canvas.bind_all("<Button-4>", _on_linux_scroll_up)
+        canvas.bind_all("<Button-5>", _on_linux_scroll_down)
+
         def _unbind_mousewheel():
             canvas.unbind_all("<MouseWheel>")
+            canvas.unbind_all("<Button-4>")
+            canvas.unbind_all("<Button-5>")
 
         win.protocol("WM_DELETE_WINDOW", lambda: (_unbind_mousewheel(), win.destroy()))
 
@@ -2628,10 +2670,8 @@ class CassetteApp(tk.Tk):
                             self.assets[asset_key] = full_img
 
                             if asset_key == "title_logo_default":
-                                # Clear overrides when changing default
                                 self.assets["title_logo_spine"] = None
                                 self.assets["title_logo_back"] = None
-
                                 self.update_override_states()
                                 self.update_search_menu_states()
 
