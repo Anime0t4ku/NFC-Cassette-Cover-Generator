@@ -71,7 +71,7 @@ jobs:
 
       - name: Build Linux executable
         working-directory: nfc-cassette-cover-generator
-        run: pyinstaller --clean --onefile --windowed --add-data "icon.png:." --add-data "assets:assets" --name NFC-Cassette-Cover-Generator nfc-cassette-cover-generator.py
+        run: pyinstaller --clean --onefile --windowed --hidden-import=PIL._tkinter_finder --hidden-import=PIL._imagingtk --add-data "icon.png:." --add-data "assets:assets" --name NFC-Cassette-Cover-Generator nfc-cassette-cover-generator.py
 
       - name: Make binary executable
         run: chmod +x nfc-cassette-cover-generator/dist/NFC-Cassette-Cover-Generator
