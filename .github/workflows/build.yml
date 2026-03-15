@@ -1,6 +1,8 @@
 name: NFC-Cassette-Cover-Generator
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
 
 permissions:
   contents: write
@@ -16,10 +18,10 @@ jobs:
 
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
@@ -35,7 +37,7 @@ jobs:
         run: pyinstaller --clean --onefile --windowed --icon app.ico --add-data "icon.png;." --add-data "assets;assets" --name NFC-Cassette-Cover-Generator nfc-cassette-cover-generator.py
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: NFC-Cassette-Cover-Generator-Windows-x86_64
           path: nfc-cassette-cover-generator/dist/NFC-Cassette-Cover-Generator.exe
@@ -50,14 +52,13 @@ jobs:
 
     steps:
       - name: Checkout branch
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      # Required for Tkinter / ImageTk (Pillow previews)
       - name: Install Tkinter
         run: |
           sudo apt-get update
@@ -77,7 +78,7 @@ jobs:
         run: chmod +x nfc-cassette-cover-generator/dist/NFC-Cassette-Cover-Generator
 
       - name: Upload Linux artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: NFC-Cassette-Cover-Generator-Linux-x86_64
           path: nfc-cassette-cover-generator/dist/NFC-Cassette-Cover-Generator
@@ -94,12 +95,12 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
@@ -114,19 +115,13 @@ jobs:
           cd dist
           tar -czvf ../NFC-Cassette-Cover-Generator-Linux-x86_64.tar.gz NFC-Cassette-Cover-Generator
 
-      - name: Update Git Tag
-        run: |
-          git tag -f Pre-release
-          git push -f origin Pre-release
-
       - name: Create or Update Release
         uses: ncipollo/release-action@v1
         with:
+          tag: Pre-release
           prerelease: true
           allowUpdates: true
           removeArtifacts: true
-          tag: Pre-release
           artifacts: |
             NFC-Cassette-Cover-Generator-Windows-x86_64.zip
             NFC-Cassette-Cover-Generator-Linux-x86_64.tar.gz
-
