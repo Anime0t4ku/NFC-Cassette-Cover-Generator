@@ -23,6 +23,7 @@ Pre-built executables are generated automatically via GitHub Actions.
 | Name | Platform | Status | Download |
 |------|----------|--------|----------|
 | NFC Cassette Cover Generator | Windows | ![Build Status](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/actions/workflows/build.yml/badge.svg) | [Download Latest Release](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/releases/download/Pre-release/NFC-Cassette-Cover-Generator-Windows-x86_64.zip) |
+| NFC Cassette Cover Generator | Linux | ![Build Status](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/actions/workflows/build.yml/badge.svg) | [Download Latest Release](https://github.com/Anime0t4ku/NFC-Cassette-Cover-Generator/releases/download/2.1.0/NFC-Cassette-Cover-Generator-Linux-x86_64.tar.gz) |
 
 ---
 
