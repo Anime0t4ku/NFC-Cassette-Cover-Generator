@@ -1283,6 +1283,7 @@ class CassetteApp(tk.Tk):
 
         if self.assets["screenshot"]:
             shot = fit_image(self.assets["screenshot"], *SCREENSHOT_MAX)
+            shot = fit_image_upscale_only(shot, *SCREENSHOT_MAX)
             x_pos = (BACK_W - shot.width) // 2
             img.paste(shot, (x_pos, y))
             y += shot.height + BACK_GAP
