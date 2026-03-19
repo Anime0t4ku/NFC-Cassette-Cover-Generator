@@ -666,14 +666,14 @@ class CassetteApp(tk.Tk):
             command=lambda: self.search_system_logo_folder("default")
         )
 
+        self.system_search_default_index = all_menu.index("end")
+
         all_menu.add_separator()
 
         all_menu.add_command(
             label="Clear",
             command=lambda: self.clear_system_logo("default")
         )
-
-        self.system_search_default_index = all_menu.index("end")
 
         system_menu.add_cascade(label="All Sides", menu=all_menu)
         system_menu.add_separator()
@@ -702,6 +702,8 @@ class CassetteApp(tk.Tk):
                 command=lambda s=side: self.search_system_logo_folder(s)
             )
 
+            search_index = sub.index("end")
+
             sub.add_separator()
 
             sub.add_command(
@@ -715,7 +717,7 @@ class CassetteApp(tk.Tk):
             if not hasattr(self, "system_search_override_indices"):
                 self.system_search_override_indices = {}
 
-            self.system_search_override_indices[side] = (sub, sub.index("end"))
+            self.system_search_override_indices[side] = (sub, search_index)
 
             system_menu.add_cascade(
                 label=f"Override {side.capitalize()}",
