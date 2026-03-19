@@ -828,6 +828,13 @@ class CassetteApp(tk.Tk):
 
         ttk.Button(
             bottom_frame,
+            text="Create Print PDF",
+            width=18,
+            command=self.create_print_pdf_from_files
+        ).pack(side="left", padx=8)
+
+        ttk.Button(
+            bottom_frame,
             text="Load Template",
             width=16,
             command=self.load_template
@@ -1828,6 +1835,70 @@ class CassetteApp(tk.Tk):
             messagebox.showinfo("Export Complete", f"Saved to:\n{file_path}")
         except Exception as e:
             messagebox.showerror("Export Failed", str(e))
+
+    def create_print_pdf_from_files(self):
+        paths = filedialog.askopenfilenames(
+            title="Select 2 cover PNG files",
+            filetypes=[("PNG Images", "*.png")]
+        )
+
+        if not paths:
+            return
+
+        if len(paths) != 2:
+            messagebox.showerror("Error", "Please select exactly 2 PNG files.")
+            return
+
+        try:
+            covers = []
+            for path in paths:
+                img = Image.open(path).convert("RGB")
+                covers.append(img)
+
+            # A4 at 300 DPI
+            page_w, page_h = 2480, 3508
+            page = Image.new("RGB", (page_w, page_h), "white")
+
+            # Exact physical cover size
+            cover_w = round((104 / 25.4) * 300)
+            cover_h = round((101.5 / 25.4) * 300)
+
+            # Small empty space between covers for cutting
+            gap_mm = 8
+            gap_px = round((gap_mm / 25.4) * 300)
+
+            resized = []
+            for img in covers:
+                fitted = fit_fill(img, cover_w, cover_h)
+                resized.append(fitted)
+
+            # Center both covers together on the page
+            total_block_h = (cover_h * 2) + gap_px
+            start_y = (page_h - total_block_h) // 2
+            x = (page_w - cover_w) // 2
+
+            y1 = start_y
+            y2 = start_y + cover_h + gap_px
+
+            page.paste(resized[0], (x, y1))
+            page.paste(resized[1], (x, y2))
+
+            file_path = filedialog.asksaveasfilename(
+                title="Save Print PDF",
+                defaultextension=".pdf",
+                filetypes=[("PDF File", "*.pdf")],
+                initialfile="cassette_print_sheet.pdf"
+            )
+
+            if not file_path:
+                return
+
+            page.save(file_path, "PDF", resolution=300.0)
+
+            messagebox.showinfo("Export Complete", f"Print PDF saved to:\n{file_path}")
+
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to create print PDF:\n{e}")
 
     def open_output_folder(self):
 
