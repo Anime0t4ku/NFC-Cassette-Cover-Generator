@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageTk, ImageFont
 # CONFIG
 # ============================================================
 
-APP_TITLE = "Cassette Cover Generator v2.1.0 by Anime0t4ku"
+APP_TITLE = "Cassette Cover Generator v2.1.1 by Anime0t4ku"
 CONFIG_FILE = "config.json"
 BASE_DIR = os.path.abspath(".")
 WEB_IMAGE_DIR = os.path.join(BASE_DIR, "web-images")
