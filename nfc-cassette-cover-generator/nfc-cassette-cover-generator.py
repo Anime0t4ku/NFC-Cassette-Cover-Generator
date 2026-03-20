@@ -1820,10 +1820,12 @@ class CassetteApp(tk.Tk):
             messagebox.showerror("Export Failed", str(e))
 
     def export_cover_as(self):
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
         file_path = filedialog.asksaveasfilename(
             defaultextension=".png",
             filetypes=[("PNG Image", "*.png")],
-            initialfile="cassette_cover.png"
+            initialfile=f"cassette_cover_{timestamp}.png"
         )
 
         if not file_path:
@@ -1982,11 +1984,13 @@ class CassetteApp(tk.Tk):
                 messagebox.showerror("Error", "Load at least one cover first.", parent=win)
                 return
 
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
             file_path = filedialog.asksaveasfilename(
                 title="Save Print PDF",
                 defaultextension=".pdf",
                 filetypes=[("PDF File", "*.pdf")],
-                initialfile="cassette_print_sheet.pdf",
+                initialfile=f"cassette_print_sheet_{timestamp}.pdf",
                 parent=win
             )
 
