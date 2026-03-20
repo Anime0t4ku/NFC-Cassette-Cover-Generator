@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageTk, ImageFont
 # CONFIG
 # ============================================================
 
-APP_TITLE = "Cassette Cover Generator v2.1.1 by Anime0t4ku"
+APP_TITLE = "Cassette Cover Generator v2.2.0 by Anime0t4ku"
 CONFIG_FILE = "config.json"
 BASE_DIR = os.path.abspath(".")
 WEB_IMAGE_DIR = os.path.join(BASE_DIR, "web-images")
@@ -830,7 +830,7 @@ class CassetteApp(tk.Tk):
             bottom_frame,
             text="Create Print PDF",
             width=18,
-            command=self.create_print_pdf_from_files
+            command=self.open_print_pdf_window
         ).pack(side="left", padx=8)
 
         ttk.Button(
@@ -1836,25 +1836,42 @@ class CassetteApp(tk.Tk):
         except Exception as e:
             messagebox.showerror("Export Failed", str(e))
 
-    def create_print_pdf_from_files(self):
-        paths = filedialog.askopenfilenames(
-            title="Select 2 cover PNG files",
-            filetypes=[("PNG Images", "*.png")]
-        )
+    def open_print_pdf_window(self):
+        win = tk.Toplevel(self)
+        win.title("Print PDF Template")
+        win.geometry("950x900")
+        win.minsize(820, 820)
+        win.transient(self)
+        win.grab_set()
 
-        if not paths:
-            return
+        # Two fixed slots
+        slots = {
+            "cover1": None,
+            "cover2": None
+        }
 
-        if len(paths) != 2:
-            messagebox.showerror("Error", "Please select exactly 2 PNG files.")
-            return
+        preview_label = ttk.Label(win)
+        preview_label.pack(pady=(12, 8), expand=True)
 
-        try:
-            covers = []
-            for path in paths:
-                img = Image.open(path).convert("RGB")
-                covers.append(img)
+        status_var = tk.StringVar(value="Cover 1: Empty    Cover 2: Empty")
 
+        ttk.Label(
+            win,
+            textvariable=status_var
+        ).pack(pady=(0, 8))
+
+        def normalize_slots():
+            # If only slot 2 has an image, move it to slot 1
+            if slots["cover1"] is None and slots["cover2"] is not None:
+                slots["cover1"] = slots["cover2"]
+                slots["cover2"] = None
+
+        def update_status():
+            c1 = "Loaded" if slots["cover1"] is not None else "Empty"
+            c2 = "Loaded" if slots["cover2"] is not None else "Empty"
+            status_var.set(f"Cover 1: {c1}    Cover 2: {c2}")
+
+        def render_print_page():
             # A4 at 300 DPI
             page_w, page_h = 2480, 3508
             page = Image.new("RGB", (page_w, page_h), "white")
@@ -1863,16 +1880,10 @@ class CassetteApp(tk.Tk):
             cover_w = round((104 / 25.4) * 300)
             cover_h = round((101.5 / 25.4) * 300)
 
-            # Small empty space between covers for cutting
+            # Gap between covers
             gap_mm = 8
             gap_px = round((gap_mm / 25.4) * 300)
 
-            resized = []
-            for img in covers:
-                fitted = fit_fill(img, cover_w, cover_h)
-                resized.append(fitted)
-
-            # Center both covers together on the page
             total_block_h = (cover_h * 2) + gap_px
             start_y = (page_h - total_block_h) // 2
             x = (page_w - cover_w) // 2
@@ -1880,25 +1891,190 @@ class CassetteApp(tk.Tk):
             y1 = start_y
             y2 = start_y + cover_h + gap_px
 
-            page.paste(resized[0], (x, y1))
-            page.paste(resized[1], (x, y2))
+            cover1 = slots["cover1"]
+            cover2 = slots["cover2"]
+
+            if cover1 is not None:
+                fitted1 = fit_fill(cover1.convert("RGB"), cover_w, cover_h)
+                page.paste(fitted1, (x, y1))
+
+            if cover2 is not None:
+                fitted2 = fit_fill(cover2.convert("RGB"), cover_w, cover_h)
+                page.paste(fitted2, (x, y2))
+
+            return page
+
+        def update_preview():
+            normalize_slots()
+            update_status()
+
+            page = render_print_page()
+
+            preview_w = 450
+            preview_h = int(page.height * (preview_w / page.width))
+            preview = page.resize((preview_w, preview_h), Image.LANCZOS)
+
+            tk_img = ImageTk.PhotoImage(preview)
+            preview_label.configure(image=tk_img)
+            preview_label.image = tk_img
+
+        def load_into_slot(slot_key):
+            path = filedialog.askopenfilename(
+                title="Select Cover Image",
+                filetypes=[("Images", "*.png *.jpg *.jpeg *.webp")]
+            )
+            if not path:
+                return
+
+            try:
+                img = Image.open(path).convert("RGBA")
+                slots[slot_key] = img
+                update_preview()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load image:\n{e}", parent=win)
+
+        def load_multiple():
+            paths = filedialog.askopenfilenames(
+                title="Select Cover Images",
+                filetypes=[("Images", "*.png *.jpg *.jpeg *.webp")]
+            )
+
+            if not paths:
+                return
+
+            try:
+                selected = list(paths)
+
+                if len(selected) > 2:
+                    messagebox.showinfo(
+                        "Notice",
+                        "Only the first 2 images will be loaded.",
+                        parent=win
+                    )
+                    selected = selected[:2]
+
+                if len(selected) >= 1:
+                    slots["cover1"] = Image.open(selected[0]).convert("RGBA")
+
+                if len(selected) >= 2:
+                    slots["cover2"] = Image.open(selected[1]).convert("RGBA")
+                else:
+                    slots["cover2"] = None
+
+                update_preview()
+
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to load images:\n{e}", parent=win)
+
+        def clear_slot(slot_key):
+            slots[slot_key] = None
+            update_preview()
+
+        def clear_all():
+            slots["cover1"] = None
+            slots["cover2"] = None
+            update_preview()
+
+        def export_pdf():
+            normalize_slots()
+
+            if slots["cover1"] is None and slots["cover2"] is None:
+                messagebox.showerror("Error", "Load at least one cover first.", parent=win)
+                return
 
             file_path = filedialog.asksaveasfilename(
                 title="Save Print PDF",
                 defaultextension=".pdf",
                 filetypes=[("PDF File", "*.pdf")],
-                initialfile="cassette_print_sheet.pdf"
+                initialfile="cassette_print_sheet.pdf",
+                parent=win
             )
 
             if not file_path:
                 return
 
-            page.save(file_path, "PDF", resolution=300.0)
+            try:
+                page = render_print_page()
+                page.save(file_path, "PDF", resolution=300.0)
 
-            messagebox.showinfo("Export Complete", f"Print PDF saved to:\n{file_path}")
+                messagebox.showinfo(
+                    "Export Complete",
+                    f"Print PDF saved to:\n{file_path}",
+                    parent=win
+                )
 
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to create print PDF:\n{e}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to create print PDF:\n{e}", parent=win)
+
+        controls = ttk.Frame(win)
+        controls.pack(pady=(0, 12))
+
+        row1 = ttk.Frame(controls)
+        row1.pack(pady=4)
+
+        ttk.Button(
+            row1,
+            text="Load Cover 1",
+            width=16,
+            command=lambda: load_into_slot("cover1")
+        ).pack(side="left", padx=6)
+
+        ttk.Button(
+            row1,
+            text="Load Cover 2",
+            width=16,
+            command=lambda: load_into_slot("cover2")
+        ).pack(side="left", padx=6)
+
+        ttk.Button(
+            row1,
+            text="Load Covers",
+            width=16,
+            command=load_multiple
+        ).pack(side="left", padx=6)
+
+        row2 = ttk.Frame(controls)
+        row2.pack(pady=4)
+
+        ttk.Button(
+            row2,
+            text="Clear Cover 1",
+            width=16,
+            command=lambda: clear_slot("cover1")
+        ).pack(side="left", padx=6)
+
+        ttk.Button(
+            row2,
+            text="Clear Cover 2",
+            width=16,
+            command=lambda: clear_slot("cover2")
+        ).pack(side="left", padx=6)
+
+        ttk.Button(
+            row2,
+            text="Clear All",
+            width=16,
+            command=clear_all
+        ).pack(side="left", padx=6)
+
+        row3 = ttk.Frame(controls)
+        row3.pack(pady=(10, 0))
+
+        ttk.Button(
+            row3,
+            text="Export PDF",
+            width=16,
+            command=export_pdf
+        ).pack(side="left", padx=6)
+
+        ttk.Button(
+            row3,
+            text="Close",
+            width=16,
+            command=win.destroy
+        ).pack(side="left", padx=6)
+
+        update_preview()
 
     def open_output_folder(self):
 
