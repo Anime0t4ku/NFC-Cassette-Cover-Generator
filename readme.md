@@ -1,3 +1,9 @@
+# This app is no longer maintained.
+
+Its features have moved to the **NFC Art Generator** in MiSTer Companion. Future improvements and fixes will be released through MiSTer Companion.
+
+Download: https://mistercompanion.org
+
 # NFC Cassette Cover Generator
 
 NFC Cassette Cover Generator is a desktop application for creating a **single print-ready cassette wrap cover**.
